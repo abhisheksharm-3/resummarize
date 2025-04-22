@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { NotesController } from "@/controllers/NotesController";
 import { useAuth } from "@/hooks/useAuth";
+import { createNote, deleteNote, getAllNotes, getNoteById, updateNote } from "@/controllers/NotesController";
 
 export function useNotes() {
   const queryClient = useQueryClient();
@@ -16,14 +16,24 @@ export function useNotes() {
     refetch,
   } = useQuery({
     queryKey: ["notes"],
-    queryFn: () => NotesController.getAllNotes(),
+    queryFn: () => getAllNotes(),
     enabled: !!user, // Only fetch if user is authenticated
   });
+  
+  // Get a specific note by ID
+  const getNote = async (noteId: string) => {
+    try {
+      const note = await getNoteById(noteId);
+      return { note, error: null };
+    } catch (error: unknown) {
+      return { note: null, error };
+    }
+  };
   
   // Create a new note
   const createNoteMutation = useMutation({
     mutationFn: (noteData: { title: string; content: string }) =>
-      NotesController.createNote(noteData),
+      createNote(noteData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
@@ -31,9 +41,10 @@ export function useNotes() {
   
   // Update an existing note
   const updateNoteMutation = useMutation({
-    mutationFn: (
-      [noteId, noteData]: [string, { title?: string; content?: string }]
-    ) => NotesController.updateNote(noteId, noteData),
+    mutationFn: ({ noteId, noteData }: { 
+      noteId: string, 
+      noteData: { title?: string; content?: string } 
+    }) => updateNote(noteId, noteData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
@@ -41,41 +52,41 @@ export function useNotes() {
   
   // Delete a note
   const deleteNoteMutation = useMutation({
-    mutationFn: (noteId: string) => NotesController.deleteNote(noteId),
+    mutationFn: (noteId: string) => deleteNote(noteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
   });
   
-  // Create a note
-  const createNote = async (noteData: { title: string; content: string }) => {
+  // Create a note wrapper
+  const createNoteWrapper = async (noteData: { title: string; content: string }) => {
     try {
       const result = await createNoteMutation.mutateAsync(noteData);
       return { note: result.note, error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { note: null, error };
     }
   };
   
-  // Update a note
-  const updateNote = async (
+  // Update a note wrapper
+  const updateNoteWrapper = async (
     noteId: string,
     noteData: { title?: string; content?: string }
   ) => {
     try {
-      const result = await updateNoteMutation.mutateAsync([noteId, noteData]);
+      const result = await updateNoteMutation.mutateAsync({ noteId, noteData });
       return { note: result.note, error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { note: null, error };
     }
   };
   
-  // Delete a note
-  const deleteNote = async (noteId: string) => {
+  // Delete a note wrapper
+  const deleteNoteWrapper = async (noteId: string) => {
     try {
       await deleteNoteMutation.mutateAsync(noteId);
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return { error };
     }
   };
@@ -85,11 +96,12 @@ export function useNotes() {
     isLoading,
     isError,
     refetch,
-    createNote,
+    getNote,
+    createNote: createNoteWrapper,
     isCreating: createNoteMutation.isPending,
-    updateNote,
+    updateNote: updateNoteWrapper,
     isUpdating: updateNoteMutation.isPending,
-    deleteNote,
+    deleteNote: deleteNoteWrapper,
     isDeleting: deleteNoteMutation.isPending,
   };
 }

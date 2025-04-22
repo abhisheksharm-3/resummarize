@@ -1,37 +1,56 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { useSummarization } from "@/hooks/useSummarization";
+import { Note } from "@/types/supabase";
+
+// Layout Components
 import { Navbar } from "@/components/layout/Navbar";
+import { Dialog } from "@/components/ui/dialog";
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight, Loader2 } from "lucide-react";
+
+// Feature Components
 import { NotesList } from "@/components/notes/NotesList";
 import { CreateNoteDialog } from "@/components/notes/CreateNoteDialog";
 import { EditNoteDialog } from "@/components/notes/EditNoteDialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, FileText, ArrowUpRight, Loader2, RefreshCw } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { Note } from "@/types/supabase";
-import { Dialog } from "@/components/ui/dialog";
+import { SummaryCard } from "@/components/notes/SummaryCard";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { EmptyNotesState } from "@/components/notes/EmptyNotesState";
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const { notes, isLoading: isNotesLoading, refetch: refetchNotes } = useNotes();
-  const { generateSummary, generateBulkSummary, isGenerating: isSummarizationGenerating } = useSummarization();
+  const { 
+    notes, 
+    isLoading: isNotesLoading, 
+    refetch: refetchNotes 
+  } = useNotes();
   
+  const { 
+    generateSummary, 
+    generateBulkSummary, 
+    isGenerating: isSummarizationGenerating 
+  } = useSummarization();
+  
+  // State management
   const [noteSummaries, setNoteSummaries] = useState<Record<string, string>>({});
   const [overallSummary, setOverallSummary] = useState<string>("");
   const [isRefreshingSummary, setIsRefreshingSummary] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   
-  // Generate summary for all notes whenever notes change
+  // Memoized values
+  const hasNotes = useMemo(() => notes && notes.length > 0, [notes]);
+  
+  // Generate summary for all notes
   const generateOverallSummary = useCallback(async () => {
-    if (!notes || notes.length === 0) return;
+    if (!hasNotes) return;
     
     setIsRefreshingSummary(true);
     try {
-      const content = notes.map(note => note.content).join("\n\n");
+      const content = notes?.map(note => note.content).join("\n\n") || "";
       const summary = await generateBulkSummary(content);
       setOverallSummary(summary);
     } catch (error) {
@@ -39,160 +58,124 @@ export default function Dashboard() {
     } finally {
       setIsRefreshingSummary(false);
     }
-  }, [notes, generateBulkSummary]);
+  }, [notes, generateBulkSummary, hasNotes]);
 
-  useEffect(() => {
-    if (notes && notes.length > 0) {
-      generateOverallSummary();
-    }
-  }, [notes, generateOverallSummary]);
-
-  const handleEditNote = (note: Note) => {
+  // Event handlers - using callbacks to prevent unnecessary re-renders
+  const handleEditNote = useCallback((note: Note) => {
     setEditingNote(note);
-  };
+  }, []);
 
-  const handleCloseEditDialog = () => {
+  const handleCloseEditDialog = useCallback(() => {
     setEditingNote(null);
     refetchNotes();
-  };
+  }, [refetchNotes]);
 
-  const handleCloseCreateDialog = () => {
+  const handleCloseCreateDialog = useCallback(() => {
     setIsCreateDialogOpen(false);
     refetchNotes();
-  };
+  }, [refetchNotes]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refetchNotes();
     generateOverallSummary();
-  };
+  }, [refetchNotes, generateOverallSummary]);
+
+  const handleCreateNote = useCallback(() => {
+    setIsCreateDialogOpen(true);
+  }, []);
+
+  // Note summaries management
+  const handleGenerateSingleSummary = useCallback(async (noteId: string, content: string) => {
+    try {
+      const summary = await generateSummary(content);
+      setNoteSummaries(prev => ({
+        ...prev,
+        [noteId]: summary
+      }));
+      return summary;
+    } catch (error) {
+      console.error("Error generating note summary:", error);
+      return "";
+    }
+  }, [generateSummary]);
 
   return (
     <Dialog>
       <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      
-      <main className="flex-1 container max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col gap-8">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage and organize your notes
-              </p>
-            </div>
+        <Navbar />
+        
+        <main className="flex-1 container max-w-7xl mx-auto px-4 py-8 animate-in fade-in duration-300">
+          <div className="flex flex-col gap-8">
+            {/* Dashboard Header */}
+            <DashboardHeader onCreateNote={handleCreateNote} />
             
-            <Button 
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus size={18} />
-              Create Note
-            </Button>
-          </div>
-          
-          {/* Summary Card */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
+            {/* Summary Card */}
+            <SummaryCard
+              overallSummary={overallSummary}
+              isRefreshing={isRefreshingSummary}
+              isLoading={isNotesLoading}
+              hasNotes={hasNotes}
+              onRefresh={generateOverallSummary}
+              onCreateNote={handleCreateNote}
+            />
+            
+            {/* Notes List */}
+            <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <FileText size={18} className="text-primary" />
-                    Summary Overview
-                  </CardTitle>
-                  <CardDescription>
-                    AI-generated summary of all your notes
-                  </CardDescription>
-                </div>
-                
+                <h2 className="text-xl font-semibold">Your Notes</h2>
                 <Button
-                  variant="outline"
+                  variant="ghost" 
                   size="sm"
-                  className="h-8 gap-1"
-                  onClick={generateOverallSummary}
-                  disabled={isRefreshingSummary || !notes || notes.length === 0}
+                  className="text-primary flex items-center gap-1 hover:bg-primary/5 transition-colors"
+                  onClick={handleRefresh}
+                  disabled={isNotesLoading}
                 >
-                  {isRefreshingSummary ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Refreshing</span>
-                    </>
+                  {isNotesLoading ? (
+                    <Loader2 size={16} className="mr-1 animate-spin" />
                   ) : (
                     <>
-                      <RefreshCw size={14} />
-                      <span>Refresh</span>
+                      Refresh
+                      <ArrowUpRight size={16} />
                     </>
                   )}
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {(isRefreshingSummary || isNotesLoading) ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              
+              {isNotesLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary/70" />
                 </div>
-              ) : notes && notes.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    No notes yet. Create your first note to see a summary!
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsCreateDialogOpen(true)}
-                    className="mt-4"
-                  >
-                    <Plus size={16} className="mr-2" /> Create Note
-                  </Button>
-                </div>
+              ) : !hasNotes ? (
+                <EmptyNotesState onCreateNote={handleCreateNote} />
               ) : (
-                <div className="prose dark:prose-invert max-w-none">
-                  <p>{overallSummary || "Generate a summary to see insights from your notes."}</p>
+                <div className="grid gap-4 animate-in fade-in duration-300">
+                  <NotesList 
+                    notes={notes || []} 
+                    noteSummaries={noteSummaries}
+                    onEditNote={handleEditNote}
+                    onRefetch={refetchNotes}
+                    onGenerateSummary={handleGenerateSingleSummary}
+                  />
                 </div>
               )}
-            </CardContent>
-          </Card>
-          
-          {/* Notes List */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Your Notes</h2>
-              <Button
-                variant="ghost" 
-                size="sm"
-                className="text-primary flex items-center gap-1"
-                onClick={handleRefresh}
-              >
-                Refresh
-                <ArrowUpRight size={16} />
-              </Button>
             </div>
-            
-            <NotesList 
-              notes={notes || []} 
-              noteSummaries={noteSummaries}
-              isLoading={isNotesLoading} 
-              onEditNote={handleEditNote}
-              onRefetch={refetchNotes}
-              onGenerateSummary={generateSummary}
-            />
           </div>
-        </div>
-      </main>
-      
-      {/* Dialogs */}
-      <CreateNoteDialog 
-        open={isCreateDialogOpen} 
-        onOpenChange={handleCloseCreateDialog} 
-      />
-      
-      {editingNote && (
-        <EditNoteDialog 
-          open={!!editingNote} 
-          onOpenChange={handleCloseEditDialog} 
-          note={editingNote}
+        </main>
+        
+        {/* Dialogs */}
+        <CreateNoteDialog 
+          open={isCreateDialogOpen} 
+          onOpenChange={handleCloseCreateDialog} 
         />
-      )}
-    </div>
+        
+        {editingNote && (
+          <EditNoteDialog 
+            open={!!editingNote} 
+            onOpenChange={handleCloseEditDialog} 
+            note={editingNote}
+          />
+        )}
+      </div>
     </Dialog>
   );
 }
