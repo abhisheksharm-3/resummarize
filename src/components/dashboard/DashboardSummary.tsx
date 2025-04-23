@@ -25,12 +25,12 @@ interface ActionItem {
 }
 
 export function DashboardSummary({ notes }: DashboardSummaryProps) {
-  // Simplified - only two summary types that users actually need
+  // Tabs and states
   const [activeTab, setActiveTab] = useState<'overview' | 'actions'>('overview');
   const [sortBy, setSortBy] = useState<'default' | 'priority'>('default');
   const [completedItems, setCompletedItems] = useState<Record<string, boolean>>({});
   
-  // Get summary data - we use actionable for actions and brief for overview
+  // Data fetching hooks
   const overviewSummary = useMultipleNotesSummary(notes, 'brief');
   const actionableSummary = useMultipleNotesSummary(notes, 'actionable');
   const insights = useNotesInsights(notes);
@@ -64,7 +64,7 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
         let priority: 'high' | 'medium' | 'low' | undefined = undefined;
         if (/urgent|asap|immediately|critical|high priority/i.test(text)) {
           priority = 'high';
-          // Clean up the text by removing priority indicators
+          // Clean up the text
           text = text.replace(/\[(urgent|high|high priority)\]/i, '').trim();
         } else if (/medium priority|soon/i.test(text)) {
           priority = 'medium';
@@ -145,10 +145,17 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
   return (
     <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
-        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" /> 
-          Smart Summary
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" /> 
+            Smart Summary
+          </CardTitle>
+          {notes.length > 0 && (
+            <Badge variant="outline" className="text-xs">
+              {notes.length} note{notes.length !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
         
         {hasNotes && (
           <Button
@@ -189,31 +196,32 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
                 <TabsTrigger value="actions">Action Items</TabsTrigger>
               </TabsList>
               
+              {/* OVERVIEW TAB - SIMPLIFIED */}
               <TabsContent value="overview" className="mt-0">
                 {overviewSummary.isLoading ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <Loader2 className="h-7 w-7 animate-spin text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">Creating your summary...</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {/* Summary */}
-                    <div className="prose dark:prose-invert max-w-full text-base">
+                  <div className="space-y-6">
+                    {/* Unified Summary */}
+                    <div className="prose dark:prose-invert max-w-full">
                       {overviewSummary.data?.summary.split('\n').map((paragraph, i) => (
                         paragraph.trim() ? <p key={i}>{paragraph}</p> : null
                       ))}
                     </div>
                     
-                    {/* Key Insights (if available) */}
+                    {/* Key Insights */}
                     {insights.data?.insights && (
-                      <div className="mt-6 pt-5 border-t">
-                        <h3 className="text-sm font-medium mb-2 text-muted-foreground uppercase">
+                      <div className="pt-4 border-t">
+                        <h3 className="text-sm font-medium mb-3 text-muted-foreground uppercase tracking-wide">
                           Key Insights
                         </h3>
-                        <div className="prose dark:prose-invert max-w-full text-base">
+                        <div className="prose dark:prose-invert max-w-full">
                           {insights.data.insights
                             .split('\n')
                             .filter(line => line.trim().length > 0)
-                            .slice(0, 3) // Limit to top 3 insights
                             .map((insight, i) => (
                               <p key={i}>{insight}</p>
                             ))}
@@ -224,6 +232,7 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
                 )}
               </TabsContent>
               
+              {/* ACTION ITEMS TAB */}
               <TabsContent value="actions" className="mt-0">
                 {actionableSummary.isLoading ? (
                   <div className="flex justify-center py-10">
@@ -306,7 +315,6 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
                       ))}
                     </div>
                     
-                    {/* Completed items indicator */}
                     {Object.values(completedItems).some(Boolean) && (
                       <div className="text-xs text-muted-foreground text-center mt-3">
                         Completed items will reset when you refresh the summary
