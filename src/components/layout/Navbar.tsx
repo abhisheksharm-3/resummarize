@@ -44,7 +44,7 @@ export const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-      <div className="container flex h-16 md:h-18 items-center justify-between py-2 md:py-4 max-w-screen-xl mx-auto">
+      <div className="flex h-16 md:h-18 items-center justify-between py-2 md:py-4 ">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center">
             <span className="text-xl font-semibold bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">

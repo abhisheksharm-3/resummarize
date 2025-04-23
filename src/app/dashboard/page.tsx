@@ -103,7 +103,7 @@ export default function Dashboard() {
   };
   
   return (
-    <div className="container py-8 px-8 lg:px-24">
+    <div className="py-8 px-8 lg:px-24 flex items-center justify-center flex-col w-full">
       <Navbar />
       <div className="flex flex-col gap-8">
         {/* Top section with summary dashboard */}
