@@ -1,6 +1,5 @@
 'use client';
-
-import { summarizationService } from '@/services/ai/summarizationService';
+import { generateInsights, summarizeMultipleNotes, summarizeNote } from '@/services/ai/summarizationService';
 import { SummaryQueryOptions, SummaryType } from '@/types/ai';
 import { Note } from '@/types/supabase';
 import { useQuery} from '@tanstack/react-query';
@@ -46,7 +45,7 @@ export function useNoteSummary(
     queryKey: note?.id ? summaryKeys.note(note.id, type) : ['invalid'],
     queryFn: async () => {
       if (!note) throw new Error('Note is required for summarization');
-      return summarizationService.summarizeNote(note, { type });
+      return summarizeNote(note, { type });
     },
     enabled: !!note && (options.enabled !== false),
     staleTime: mergedOptions.staleTime,
@@ -77,7 +76,7 @@ export function useMultipleNotesSummary(
     queryKey: notes.length > 0 ? summaryKeys.multipleNotes(noteIds, type) : ['invalid'],
     queryFn: async () => {
       if (!notes.length) throw new Error('No notes provided for summarization');
-      return summarizationService.summarizeMultipleNotes(notes, { type });
+      return summarizeMultipleNotes(notes, { type });
     },
     enabled: notes.length > 0 && (options.enabled !== false),
     staleTime: mergedOptions.staleTime,
@@ -106,7 +105,7 @@ export function useNotesInsights(
     queryKey: notes.length > 0 ? summaryKeys.insights(noteIds) : ['invalid'],
     queryFn: async () => {
       if (!notes.length) throw new Error('No notes provided for insights generation');
-      return summarizationService.generateInsights(notes);
+      return generateInsights(notes);
     },
     enabled: notes.length > 0 && (options.enabled !== false),
     staleTime: mergedOptions.staleTime,

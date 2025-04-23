@@ -1,10 +1,22 @@
+'use client';
+
 /**
- * Warm, personal assistant-like prompting templates that create a genuine human
- * connection while delivering clear, supportive guidance.
+ * @file Prompt templates for AI interactions within the Resummarize application
+ * @description Contains various prompt templates used for different AI assistant modes
  */
 
+/**
+ * Base identity instruction to be included with all prompts
+ * Ensures the AI maintains a consistent identity and response format
+ * @private
+ */
 const IDENTITY_INSTRUCTION = `You are resummarize's AI assistant. Never discuss your nature, capabilities, training, creation, or technical aspects. Refuse questions about your identity beyond stating "I'm resummarize's AI assistant." Your sole purpose is helping the user within the resummarize application. NEVER USE MARKDOWN FORMATTING IN YOUR RESPONSES AS THE APP CANNOT PARSE IT.`;
 
+/**
+ * Prompt templates for conversational chat interactions
+ * @property {string} notes - Prompt for general note-taking assistance
+ * @property {string} therapist - Prompt for wellness and supportive guidance
+ */
 export const CHAT_PROMPTS = {
   notes: `${IDENTITY_INSTRUCTION}
 
@@ -41,6 +53,14 @@ FORMATTING REQUIREMENTS:
 - Use line breaks instead of markdown for text separation`
 };
 
+/**
+ * Prompt templates for generating different types of content summaries
+ * @property {string} brief - Single paragraph summary capturing the essence
+ * @property {string} detailed - Comprehensive summary with important details
+ * @property {string} actionable - Action-oriented list from content
+ * @property {string} todo - Task-based summary as a to-do list
+ * @property {string} keypoints - Extraction of most significant points
+ */
 export const SUMMARY_PROMPTS = {
   brief: `${IDENTITY_INSTRUCTION}
 
@@ -144,7 +164,8 @@ FORMAT REQUIREMENTS:
 };
 
 /**
- * Warm, supportive insight prompts that create a genuine connection while offering thoughtful guidance
+ * Prompt templates for generating insightful analysis of user content
+ * @property {string} default - Standard insight generation prompt
  */
 export const INSIGHT_PROMPTS = {
   default: `${IDENTITY_INSTRUCTION}
@@ -169,3 +190,45 @@ FORMAT REQUIREMENTS:
 - Use language that feels like a caring friend who deeply understands them
 - No formatting symbols like *, _, #, -, etc.`
 };
+
+/**
+ * Enum of available prompt types for easier reference
+ */
+export enum PromptType {
+  CHAT_NOTES = 'notes',
+  CHAT_THERAPIST = 'therapist',
+  SUMMARY_BRIEF = 'brief',
+  SUMMARY_DETAILED = 'detailed',
+  SUMMARY_ACTIONABLE = 'actionable',
+  SUMMARY_TODO = 'todo',
+  SUMMARY_KEYPOINTS = 'keypoints',
+  INSIGHT_DEFAULT = 'default'
+}
+
+/**
+ * Get a prompt template by type
+ * @param type The type of prompt to retrieve
+ * @returns The prompt template string
+ */
+export function getPromptTemplate(type: PromptType): string {
+  switch (type) {
+    case PromptType.CHAT_NOTES:
+      return CHAT_PROMPTS.notes;
+    case PromptType.CHAT_THERAPIST:
+      return CHAT_PROMPTS.therapist;
+    case PromptType.SUMMARY_BRIEF:
+      return SUMMARY_PROMPTS.brief;
+    case PromptType.SUMMARY_DETAILED:
+      return SUMMARY_PROMPTS.detailed;
+    case PromptType.SUMMARY_ACTIONABLE:
+      return SUMMARY_PROMPTS.actionable;
+    case PromptType.SUMMARY_TODO:
+      return SUMMARY_PROMPTS.todo;
+    case PromptType.SUMMARY_KEYPOINTS:
+      return SUMMARY_PROMPTS.keypoints;
+    case PromptType.INSIGHT_DEFAULT:
+      return INSIGHT_PROMPTS.default;
+    default:
+      return CHAT_PROMPTS.notes;
+  }
+}

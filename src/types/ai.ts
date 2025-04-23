@@ -1,14 +1,10 @@
+import { ChatMessage } from "./chat";
+
 export interface SummarizationOptions {
   type: "brief" | "detailed" | "actionable" | "todo" | "keypoints";
 }
 
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: string;
-}
 
-export type ChatMode = "notes" | "therapist";
 
 export type SummaryType = "brief" | "actionable" | "todo" | "keypoints";
 export /**
@@ -19,4 +15,17 @@ interface SummaryQueryOptions {
  retry?: boolean | number;
  retryDelay?: number;
  enabled?: boolean;
+}
+
+
+
+
+
+/**
+ * Response type for chat operations
+ */
+export interface ChatResponse {
+  success: boolean;
+  message?: ChatMessage;
+  error?: string;
 }
