@@ -6,7 +6,17 @@ export interface AuthResponse {
     session: Session | null;
     error: AuthError | null;
   }
-
+  export interface ResetPasswordOptions {
+    /**
+     * Custom redirect URL after password reset
+     */
+    redirectUrl?: string;
+    
+    /**
+     * Whether to automatically sign in the user after password reset
+     */
+    autoSignIn?: boolean;
+  }
   export enum AuthMode {
     LOGIN = 'login',
     SIGNUP = 'signup',
