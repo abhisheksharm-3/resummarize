@@ -21,14 +21,13 @@ export interface ChatMessage {
    * Optional timestamp for when the message was sent
    */
   timestamp?: string;
-  
-
 }
 
 /**
  * Chat mode options for the chatbot
  */
 export type ChatMode = "notes" | "therapist";
+
 /**
  * Configuration options for the chatbot hook
  */
@@ -111,4 +110,3 @@ export interface UseChatbotReturn {
    */
   lastError: Error | null;
 }
-

@@ -5,12 +5,25 @@ import { Note } from "./supabase";
  * Type definition for action items extracted from notes
  */
 export interface ActionItem {
+  /** Unique identifier for the action item */
   id: string;
+  
+  /** Text content of the action item */
   text: string;
+  
+  /** Whether the action item has been completed */
   completed: boolean;
+  
+  /** Priority level of the action item */
   priority: 'high' | 'medium' | 'low' | undefined;
+  
+  /** Optional due date for the action item */
   dueDate?: string;
+  
+  /** Optional category for better organization */
   category?: string;
+  
+  /** Optional source reference (e.g., note ID) */
   source?: string;
 }
 
@@ -28,12 +41,24 @@ export type SortOption = 'default' | 'priority' | 'date';
  * Props for DashboardSummary component
  */
 export interface DashboardSummaryProps {
+  /** Array of notes to summarize */
   notes: Note[];
 }
+
+/**
+ * Props for NoteViewEditDialog component
+ */
 export interface NoteViewEditDialogProps {
+  /** The note to view or edit, null when creating new note */
   note: Note | null;
+  
+  /** Whether the dialog is currently open */
   isOpen: boolean;
+  
+  /** Handler for closing the dialog */
   onClose: () => void;
+  
+  /** Handler for deleting a note */
   onDelete: (id: string) => void;
 }
 

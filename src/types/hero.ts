@@ -1,13 +1,15 @@
 import { ReactNode } from "react";
 
-export interface FeatureCardProps {
-    icon: ReactNode;
-    title: string;
-    description: string;
-  }
-
-  export interface Feature {
-    icon: ReactNode;
-    title: string;
-    description: string;
-  }
+/**
+ * Interface for feature information used throughout the application
+ */
+export interface Feature {
+  /** Icon component to visually represent the feature */
+  icon: ReactNode;
+  
+  /** Title of the feature */
+  title: string;
+  
+  /** Description explaining the feature */
+  description: string;
+}
