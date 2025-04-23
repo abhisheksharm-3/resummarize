@@ -1,53 +1,65 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { summarizeBulk, summarizeNote } from "@/services/ai/actions";
+import { summarizationService } from '@/services/ai/summarizationService';
+import { SummaryType } from '@/types/ai';
+import { Note } from '@/types/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
-export function useSummarization() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Summarize a single note
-  const summarizeMutation = useMutation({
-    mutationFn: (content: string) => summarizeNote(content),
+// Hook for summarizing a single note
+export function useNoteSummary(note: Note | null, type: SummaryType = 'brief') {
+  return useQuery({
+    queryKey: ['note-summary', note?.id, type],
+    queryFn: () => {
+      if (!note) throw new Error('Note is required');
+      return summarizationService.summarizeNote(note, { type });
+    },
+    enabled: !!note,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
-  
-  // Summarize multiple notes
-  const bulkSummarizeMutation = useMutation({
-    mutationFn: (content: string) => summarizeBulk(content),
-  });
-  
-  // Generate summary for a single note
-  const generateSummary = async (content: string) => {
-    try {
-      setIsGenerating(true);
-      const summary = await summarizeMutation.mutateAsync(content);
-      return summary;
-    } catch (error) {
-      console.error("Error generating summary:", error);
-      return "";
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  
-  // Generate summary for multiple notes
-  const generateBulkSummary = async (content: string) => {
-    try {
-      setIsGenerating(true);
-      const summary = await bulkSummarizeMutation.mutateAsync(content);
-      return summary;
-    } catch (error) {
-      console.error("Error generating bulk summary:", error);
-      return "";
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+}
 
+// Hook for summarizing multiple notes
+export function useMultipleNotesSummary(notes: Note[], type: SummaryType = 'brief') {
+  return useQuery({
+    queryKey: ['notes-summary', notes.map(n => n.id).join(','), type],
+    queryFn: () => {
+      if (!notes.length) throw new Error('No notes provided');
+      return summarizationService.summarizeMultipleNotes(notes, { type });
+    },
+    enabled: notes.length > 0,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+}
+
+// Hook for generating insights from all notes
+export function useNotesInsights(notes: Note[]) {
+  return useQuery({
+    queryKey: ['notes-insights', notes.map(n => n.id).join(',')],
+    queryFn: () => {
+      if (!notes.length) throw new Error('No notes provided');
+      return summarizationService.generateInsights(notes);
+    },
+    enabled: notes.length > 0,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+}
+
+// Custom hook to manage different summary types
+export function useDynamicSummaries(notes: Note[]) {
+  const [selectedSummaryType, setSelectedSummaryType] = useState<SummaryType>('brief');
+  
+  const allNotesSummary = useMultipleNotesSummary(notes, selectedSummaryType);
+  const notesInsights = useNotesInsights(notes);
+  
+  const summaryTypes: SummaryType[] = ['brief', 'detailed', 'actionable', 'todo', 'keypoints'];
+  
   return {
-    generateSummary,
-    generateBulkSummary,
-    isGenerating,
+    selectedSummaryType,
+    setSelectedSummaryType,
+    summaryTypes,
+    allNotesSummary,
+    notesInsights,
+    isLoading: allNotesSummary.isLoading || notesInsights.isLoading
   };
 }

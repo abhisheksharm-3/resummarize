@@ -1,109 +1,80 @@
 import { createClient } from "@/services/supabase/client";
-import { Note, UpdateNote } from "@/types/supabase";
+import { InsertNote, Note, UpdateNote } from "@/types/supabase";
 
 const supabase = createClient();
 
-// Get all notes for the authenticated user
-export async function getAllNotes(): Promise<Note[]> {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) {
-    throw new Error("User not authenticated");
-  }
-
+export async function getNotes(): Promise<Note[]> {
   const { data, error } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("user_id", userData.user.id)
-    .order("updated_at", { ascending: false });
+    .from('notes')
+    .select('*')
+    .order('updated_at', { ascending: false });
 
   if (error) {
+    console.error('Error fetching notes:', error);
     throw error;
   }
 
-  return data as Note[];
+  return data || [];
 }
 
-// Get a specific note by ID
-export async function getNoteById(noteId: string): Promise<Note> {
+export async function getNoteById(id: string): Promise<Note | null> {
   const { data, error } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("id", noteId)
+    .from('notes')
+    .select('*')
+    .eq('id', id)
     .single();
 
   if (error) {
+    console.error('Error fetching note by id:', error);
     throw error;
   }
 
-  return data as Note;
+  return data;
 }
 
-// Create a new note
-export async function createNote(noteData: {
-  title: string;
-  content: string;
-}): Promise<{ note: Note }> {
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) {
-    throw new Error("User not authenticated");
+export async function createNote(note: InsertNote): Promise<Note> {
+  const { data, error } = await supabase
+    .from('notes')
+    .insert([note])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating note:', error);
+    throw error;
   }
 
+  return data;
+}
+
+export async function updateNote(note: UpdateNote): Promise<Note> {
   const { data, error } = await supabase
-    .from("notes")
-    .insert({
-      title: noteData.title,
-      content: noteData.content,
-      user_id: userData.user.id,
+    .from('notes')
+    .update({
+      title: note.title,
+      content: note.content,
+      updated_at: new Date().toISOString(),
     })
+    .eq('id', note.id)
     .select()
     .single();
 
   if (error) {
+    console.error('Error updating note:', error);
     throw error;
   }
 
-  return { note: data as Note };
+  return data;
 }
 
-// Update an existing note
-export async function updateNote(
-  noteId: string,
-  noteData: { title?: string; content?: string }
-): Promise<{ note: Note }> {
-  const updateData: UpdateNote = {
-    updated_at: new Date().toISOString(),
-  };
-
-  if (noteData.title !== undefined) {
-    updateData.title = noteData.title;
-  }
-
-  if (noteData.content !== undefined) {
-    updateData.content = noteData.content;
-  }
-
-  const { data, error } = await supabase
-    .from("notes")
-    .update(updateData)
-    .eq("id", noteId)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return { note: data as Note };
-}
-
-// Delete a note
-export async function deleteNote(noteId: string): Promise<void> {
+export async function deleteNote(id: string): Promise<void> {
   const { error } = await supabase
-    .from("notes")
+    .from('notes')
     .delete()
-    .eq("id", noteId);
+    .eq('id', id);
 
   if (error) {
+    console.error('Error deleting note:', error);
     throw error;
   }
 }
