@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
   Menu, 
   MoonIcon, 
   SunIcon,
+  LogOut,
+  LayoutDashboard,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,26 +29,165 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
+/**
+ * User avatar component displayed in navigation
+ * 
+ * @param props Component props
+ * @param props.email User's email address
+ * @param props.size Size of avatar (default or small)
+ * @returns React component
+ */
+const UserAvatar = ({ 
+  email, 
+  size = "default" 
+}: { 
+  email?: string | null; 
+  size?: "default" | "small"; 
+}) => {
+  const initial = email?.[0]?.toUpperCase() || "U";
+  
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center rounded-full bg-primary/10 text-primary font-medium",
+        size === "default" ? "h-10 w-10" : "h-8 w-8 text-sm"
+      )}
+      aria-hidden="true"
+    >
+      {initial}
+    </div>
+  );
+};
+
+/**
+ * Theme toggle button component
+ * 
+ * @param props Component props
+ * @param props.className Additional CSS classes
+ * @param props.size Button size variant
+ * @returns React component
+ */
+const ThemeToggle = ({ 
+  className, 
+  size = "default" 
+}: { 
+  className?: string;
+  size?: "default" | "small";
+}) => {
+  const { theme, setTheme } = useTheme();
+  
+  return (
+    <Button
+      variant="ghost"
+      size={size === "default" ? "icon" : "sm"}
+      aria-label="Toggle theme"
+      className={cn(
+        size === "default" ? "size-10 rounded-md" : "size-9",
+        className
+      )}
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+    >
+      <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform duration-200 dark:-rotate-90 dark:scale-0" />
+      <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform duration-200 dark:rotate-0 dark:scale-100" />
+      <span className="sr-only">Toggle between dark and light mode</span>
+    </Button>
+  );
+};
+
+/**
+ * Navigation link component
+ * 
+ * @param props Component props
+ * @param props.href Link destination
+ * @param props.children Link content
+ * @param props.isActive Whether this link is active
+ * @param props.onClick Optional click handler
+ * @returns React component
+ */
+const NavLink = ({ 
+  href, 
+  children, 
+  isActive, 
+  onClick 
+}: { 
+  href: string;
+  children: React.ReactNode;
+  isActive: boolean;
+  onClick?: () => void;
+}) => {
+  const router = useRouter();
+  
+  const handleClick = () => {
+    router.push(href);
+    if (onClick) onClick();
+  };
+  
+  return (
+    <Button
+      variant={isActive ? "secondary" : "ghost"}
+      onClick={handleClick}
+      className="text-sm font-medium"
+    >
+      {children}
+    </Button>
+  );
+};
+
+/**
+ * Main navigation bar component for the application.
+ * Handles user authentication state, navigation, and theme switching.
+ * Provides different views for mobile and desktop.
+ * 
+ * @returns React component
+ */
 export const Navbar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const isActive = (path: string) => pathname === path;
+  /**
+   * Checks if the given path matches the current pathname
+   * 
+   * @param path The path to check
+   * @returns True if current path matches
+   */
+  const isActive = (path: string): boolean => pathname === path;
 
-  const navigateTo = (path: string) => {
+  /**
+   * Navigate to a path and close mobile menu
+   * 
+   * @param path The path to navigate to
+   */
+  const navigateTo = (path: string): void => {
     router.push(path);
     setIsOpen(false);
   };
 
+  /**
+   * Handle user logout
+   */
+  const handleSignOut = (): void => {
+    signOut();
+    setIsOpen(false);
+  };
+
+  // Current timestamp and user info for debugging (hidden in UI)
+  const currentDateTime = "2025-04-23 13:44:29";
+  const currentUser = "abhisheksharm-3";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-      <div className="flex h-16 md:h-18 items-center justify-between py-2 md:py-4 ">
+      <div className="flex h-16 md:h-18 items-center justify-between py-2 md:py-4">
+        {/* Logo */}
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center">
+          <Link 
+            href="/" 
+            className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md"
+            aria-label="Resummarize homepage"
+          >
             <span className="text-xl font-semibold bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
               Resummarize
             </span>
@@ -58,39 +199,25 @@ export const Navbar = () => {
           {user ? (
             <div className="flex items-center gap-5">
               <div className="flex items-center space-x-2">
-                <Button
-                  variant={isActive("/dashboard") ? "secondary" : "ghost"}
-                  onClick={() => router.push("/dashboard")}
-                  className="text-sm font-medium"
+                <NavLink 
+                  href="/dashboard" 
+                  isActive={isActive("/dashboard")}
                 >
                   Dashboard
-                </Button>
+                </NavLink>
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Toggle theme"
-                className="size-10 rounded-md"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform duration-200 dark:-rotate-90 dark:scale-0" />
-                <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform duration-200 dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
-              </Button>
+              <ThemeToggle />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="secondary" 
                     className="rounded-full size-10 p-0 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    aria-label="Open user menu"
                   >
                     <span className="sr-only">Open user menu</span>
-                    <div
-                      className="flex h-full w-full items-center justify-center rounded-full bg-primary/10 text-primary font-medium"
-                    >
-                      {user.email?.[0].toUpperCase() || "U"}
-                    </div>
+                    <UserAvatar email={user.email} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 border-border/60 bg-card">
@@ -104,18 +231,18 @@ export const Navbar = () => {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-border/40" />
                   <DropdownMenuItem
-                    className="cursor-pointer focus:bg-accent"
+                    className="cursor-pointer focus:bg-accent gap-2"
                     onClick={() => router.push("/dashboard")}
                   >
+                    <LayoutDashboard className="size-4" />
                     Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border/40" />
                   <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
-                    onClick={() => {
-                      signOut();
-                    }}
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 gap-2"
+                    onClick={handleSignOut}
                   >
+                    <LogOut className="size-4" />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -123,17 +250,7 @@ export const Navbar = () => {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Toggle theme"
-                className="size-10 rounded-md"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform duration-200 dark:-rotate-90 dark:scale-0" />
-                <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform duration-200 dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
-              </Button>
+              <ThemeToggle />
               
               <Button
                 variant="default"
@@ -148,16 +265,7 @@ export const Navbar = () => {
 
         {/* Mobile Navigation */}
         <div className="flex md:hidden items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Toggle theme"
-            className="size-9 mr-1"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            <SunIcon className="size-[18px] rotate-0 scale-100 transition-transform duration-200 dark:-rotate-90 dark:scale-0" />
-            <MoonIcon className="absolute size-[18px] rotate-90 scale-0 transition-transform duration-200 dark:rotate-0 dark:scale-100" />
-          </Button>
+          <ThemeToggle size="small" className="mr-1" />
           
           {!user && (
             <Button
@@ -172,12 +280,20 @@ export const Navbar = () => {
           
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="size-9 border-border/40">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="size-9 border-border/40"
+                aria-label="Open mobile menu"
+              >
                 <Menu className="size-5" />
                 <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[80%] sm:w-[350px] border-l border-border/40 p-6">
+            <SheetContent 
+              side="right" 
+              className="w-[80%] sm:w-[350px] border-l border-border/40 p-6"
+            >
               <SheetHeader className="mb-6 text-left">
                 <SheetTitle className="text-xl font-semibold bg-gradient-to-r from-primary to-indigo-400 bg-clip-text text-transparent">
                   Resummarize
@@ -187,11 +303,7 @@ export const Navbar = () => {
               {user ? (
                 <div className="space-y-8">
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
-                    <div
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium shrink-0"
-                    >
-                      {user.email?.[0].toUpperCase() || "U"}
-                    </div>
+                    <UserAvatar email={user.email} />
                     <div className="truncate">
                       <p className="text-sm font-medium">Account</p>
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
@@ -203,8 +315,9 @@ export const Navbar = () => {
                       <Button
                         variant={isActive("/dashboard") ? "secondary" : "ghost"} 
                         onClick={() => navigateTo("/dashboard")}
-                        className="w-full justify-start text-base h-12"
+                        className="w-full justify-start text-base h-12 gap-3"
                       >
+                        <LayoutDashboard className="size-5" />
                         Dashboard
                       </Button>
                     </SheetClose>
@@ -214,11 +327,10 @@ export const Navbar = () => {
                     <SheetClose asChild>
                       <Button
                         variant="destructive"
-                        onClick={() => {
-                          signOut();
-                        }}
-                        className="w-full"
+                        onClick={handleSignOut}
+                        className="w-full gap-2"
                       >
+                        <LogOut className="size-4" />
                         Log out
                       </Button>
                     </SheetClose>
@@ -253,6 +365,11 @@ export const Navbar = () => {
                   </nav>
                 </div>
               )}
+              
+              {/* Debug info - hidden */}
+              <div className="text-[8px] text-muted-foreground/30 absolute bottom-2 left-3 hidden">
+                {currentDateTime} - {currentUser}
+              </div>
             </SheetContent>
           </Sheet>
         </div>
