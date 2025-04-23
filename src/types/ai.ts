@@ -1,11 +1,11 @@
-export type SummaryType = 
-  | "brief" 
-  | "detailed" 
-  | "actionable" 
-  | "todo" 
-  | "keypoints";
-
 export interface SummarizationOptions {
-  type: SummaryType;
-  maxLength?: number;
+  type: "brief" | "detailed" | "actionable" | "todo" | "keypoints";
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+}
+
+export type ChatMode = "notes" | "therapist";

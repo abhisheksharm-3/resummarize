@@ -28,6 +28,7 @@ import { NoteCard } from '@/components/notes/NoteCard';
 import { Navbar } from '@/components/layout/Navbar';
 import { useUser } from '@/hooks/useUser';
 import { NoteViewEditDialog } from '@/components/notes/NoteViewEditDialog.tsx';
+import { ChatbotFloating } from '@/components/chatbot/ChatbotFloating'; // Import the new component
 
 export default function Dashboard() {
   const { data: notes = [], isLoading } = useNotes();
@@ -239,6 +240,9 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Add the ChatbotFloating component */}
+      <ChatbotFloating notes={notes} />
     </div>
   );
 }
