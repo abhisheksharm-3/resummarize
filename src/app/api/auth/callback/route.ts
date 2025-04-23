@@ -12,7 +12,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     
     // If no code is provided, redirect to error page
     if (!code) {
-      return createRedirectResponse(`${getBaseUrl(request)}/auth/auth-code-error`)
+      return createRedirectResponse(`${getBaseUrl()}/auth/auth-code-error`)
     }
 
     // Exchange the code for a session
@@ -22,57 +22,34 @@ export async function GET(request: Request): Promise<NextResponse> {
     // If exchange failed, redirect to error page
     if (error) {
       console.error('Auth code exchange error:', error.message)
-      return createRedirectResponse(`${getBaseUrl(request)}/auth/auth-code-error`)
+      return createRedirectResponse(`${getBaseUrl()}/auth/auth-code-error`)
     }
 
     // Authentication successful, redirect to the specified path
-    return createRedirectResponse(`${getBaseUrl(request)}${next}`)
+    return createRedirectResponse(`${getBaseUrl()}${next}`)
   } catch (error) {
     console.error('Unexpected error during auth callback:', error)
-    return createRedirectResponse(`${getBaseUrl(request)}/auth/auth-code-error`)
+    return createRedirectResponse(`${getBaseUrl()}/auth/auth-code-error`)
   }
 }
 
 /**
- * Gets the correct base URL for redirects, considering all environment variables
- * and request headers
+ * Gets the base URL from environment variables only
  */
-function getBaseUrl(request: Request): string {
-  // Add debugging
-  console.log('ENV URL:', process.env.NEXT_PUBLIC_SITE_URL);
-  console.log('Headers:', {
-    'x-forwarded-host': request.headers.get('x-forwarded-host'),
-    'x-forwarded-server': request.headers.get('x-forwarded-server'),
-    'host': request.headers.get('host'),
-    'x-forwarded-proto': request.headers.get('x-forwarded-proto')
-  });
-  console.log('Request URL:', request.url);
-  
-  // Existing logic...
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
-  }
-  
-  const forwardedHost = 
-    request.headers.get('x-forwarded-host') || 
-    request.headers.get('x-forwarded-server') ||
-    request.headers.get('host')
-    
-  const protocol = 
-    request.headers.get('x-forwarded-proto') === 'http' ? 'http' : 'https'
-
-  if (forwardedHost) {
-    return `${protocol}://${forwardedHost}`
-  }
-  
-  return new URL(request.url).origin
+function getBaseUrl(): string {
+  // Use environment variable or fallback to a default
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                  process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
+                  'http://localhost:3000'
+                  
+  // Remove trailing slash if present
+  return baseUrl.replace(/\/$/, '')
 }
 
 /**
  * Creates a redirect response with the appropriate headers
  */
 function createRedirectResponse(url: string): NextResponse {
-  console.log('Redirecting to:', url) // Add logging to debug redirects
   return NextResponse.redirect(url, {
     status: 302,
     headers: {
