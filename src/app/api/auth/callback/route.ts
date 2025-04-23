@@ -38,12 +38,21 @@ export async function GET(request: Request): Promise<NextResponse> {
  * and request headers
  */
 function getBaseUrl(request: Request): string {
-  // Check for explicit production URL override (recommended solution)
+  // Add debugging
+  console.log('ENV URL:', process.env.NEXT_PUBLIC_SITE_URL);
+  console.log('Headers:', {
+    'x-forwarded-host': request.headers.get('x-forwarded-host'),
+    'x-forwarded-server': request.headers.get('x-forwarded-server'),
+    'host': request.headers.get('host'),
+    'x-forwarded-proto': request.headers.get('x-forwarded-proto')
+  });
+  console.log('Request URL:', request.url);
+  
+  // Existing logic...
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
   }
   
-  // Check for common header variations
   const forwardedHost = 
     request.headers.get('x-forwarded-host') || 
     request.headers.get('x-forwarded-server') ||
@@ -56,8 +65,6 @@ function getBaseUrl(request: Request): string {
     return `${protocol}://${forwardedHost}`
   }
   
-  // Last resort - use the request's URL origin
-  // (Note: this might still be incorrect in production)
   return new URL(request.url).origin
 }
 
