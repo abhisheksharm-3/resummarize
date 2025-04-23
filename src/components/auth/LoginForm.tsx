@@ -1,98 +1,91 @@
 'use client';
 
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useSignIn, useSignInWithGoogle } from '@/hooks/useUser';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { RiGoogleLine, RiLoader2Fill } from '@remixicon/react';
-import { AuthMode, DividerWithTextProps, FormData, FormFieldProps, LoadingButtonProps } from '@/types/auth';
-
-const FormField: React.FC<FormFieldProps> = ({
-  id,
-  label,
-  type = 'text',
-  value,
-  onChange,
-  required = false,
-  rightElement = null,
-}) => (
-  <div className="space-y-2">
-    <div className="flex justify-between items-center">
-      <Label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </Label>
-      {rightElement}
-    </div>
-    <Input
-      id={id}
-      type={type}
-      placeholder={type === 'email' ? 'name@example.com' : undefined}
-      value={value}
-      onChange={onChange}
-      className="bg-background"
-      required={required}
-    />
-  </div>
-);
-
-const LoadingButton: React.FC<LoadingButtonProps> = ({
-  isPending,
-  pendingText,
-  defaultText,
-  className,
-  ...props
-}) => (
-  <Button 
-    disabled={isPending} 
-    className={className}
-    {...props}
-  >
-    {isPending ? (
-      <>
-        <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />
-        {pendingText}
-      </>
-    ) : (
-      defaultText
-    )}
-  </Button>
-);
-
-const DividerWithText: React.FC<DividerWithTextProps> = ({ text }) => (
-  <div className="relative">
-    <div className="absolute inset-0 flex items-center">
-      <span className="w-full border-t border-border/60" />
-    </div>
-    <div className="relative flex justify-center text-xs uppercase">
-      <span className="bg-card px-2 text-muted-foreground">
-        {text}
-      </span>
-    </div>
-  </div>
-);
+import { RiGoogleLine, RiLoader2Fill, RiAlertLine } from '@remixicon/react';
+import { AuthMode, FormData } from '@/types/auth';
+import { FormField } from '@/components/auth/FormField';
+import { LoadingButton } from '@/components/auth/LoadingButton';
+import { DividerWithText } from '@/components/auth/DividerWithText';
 
 interface LoginFormProps {
   onModeChange: (mode: AuthMode) => void;
 }
 
+/**
+ * LoginForm component for user authentication
+ * 
+ * @param props Component props
+ * @param props.onModeChange Function to change authentication mode (login/signup/reset)
+ * @returns Login form component
+ */
 export default function LoginForm({ onModeChange }: LoginFormProps) {
+  // Form state
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: ''
   });
   
+  // Form validation state
+  const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [isFormValid, setIsFormValid] = useState(false);
+  
+  // Auth hooks
   const signIn = useSignIn();
   const signInWithGoogle = useSignInWithGoogle();
 
+  // Update form field handler
   const updateFormField = (field: keyof FormData) => (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field-specific validation error when user types
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
+  // Validate email format
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
+  // Validate form on data change
+  useEffect(() => {
+    const errors: Partial<Record<keyof FormData, string>> = {};
+    let valid = true;
+    
+    // Email validation
+    if (formData.email && !validateEmail(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+      valid = false;
+    }
+    
+    // Password validation
+    if (formData.password && formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+      valid = false;
+    }
+    
+    setValidationErrors(errors);
+    setIsFormValid(valid && Boolean(formData.email) && Boolean(formData.password));
+  }, [formData]);
+
+  // Form submit handler
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    signIn.mutate(formData);
+    
+    if (!isFormValid) return;
+    
+    signIn.mutate(formData, {
+      onError: (error) => {
+        // You could handle specific error types here if needed
+        console.error("Login error:", error);
+      }
+    });
   };
 
   return (
@@ -105,7 +98,8 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
 
       {/* Error alert */}
       {signIn.error && (
-        <Alert variant="destructive" className="text-sm">
+        <Alert variant="destructive" className="text-sm animate-in fade-in-50">
+          <RiAlertLine className="h-4 w-4 mr-2" />
           <AlertDescription>
             {signIn.error.message || 'Authentication failed. Please check your credentials.'}
           </AlertDescription>
@@ -121,6 +115,10 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
           value={formData.email}
           onChange={updateFormField('email')}
           required
+          error={validationErrors.email}
+          autoComplete="email"
+          aria-invalid={Boolean(validationErrors.email)}
+          aria-describedby={validationErrors.email ? "email-error" : undefined}
         />
         
         <FormField 
@@ -130,11 +128,15 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
           value={formData.password}
           onChange={updateFormField('password')}
           required
+          error={validationErrors.password}
+          autoComplete="current-password"
+          aria-invalid={Boolean(validationErrors.password)}
+          aria-describedby={validationErrors.password ? "password-error" : undefined}
           rightElement={
             <button 
               type="button"
               onClick={() => onModeChange(AuthMode.RESET)}
-              className="text-xs text-primary hover:text-primary/90 transition-colors font-medium"
+              className="text-xs text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1"
             >
               Forgot password?
             </button>
@@ -147,6 +149,7 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
           isPending={signIn.isPending}
           pendingText="Signing in..."
           defaultText="Sign in"
+          disabled={!isFormValid || signIn.isPending}
         />
       </form>
 
@@ -156,7 +159,7 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
       <Button
         type="button"
         variant="outline"
-        className="w-full flex items-center justify-center gap-2 font-medium border-border"
+        className="w-full flex items-center justify-center gap-2 font-medium border-border hover:bg-muted/50"
         onClick={() => signInWithGoogle.mutate()}
         disabled={signInWithGoogle.isPending}
       >
@@ -174,7 +177,7 @@ export default function LoginForm({ onModeChange }: LoginFormProps) {
         <button
           type="button"
           onClick={() => onModeChange(AuthMode.SIGNUP)}
-          className="text-primary hover:text-primary/90 transition-colors font-medium"
+          className="text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 font-medium"
         >
           Sign up
         </button>

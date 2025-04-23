@@ -34,8 +34,12 @@ export interface AuthResponse {
     isPending: boolean;
     pendingText: string;
     defaultText: string;
+    className?: string;
+    disabled?: boolean;
   }
-  
+  export interface SignupFormProps {
+    onModeChange: (mode: AuthMode) => void;
+  }
   export interface DividerWithTextProps {
     text: string;
   }
