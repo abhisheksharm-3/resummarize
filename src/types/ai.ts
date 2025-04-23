@@ -9,3 +9,5 @@ export interface ChatMessage {
 }
 
 export type ChatMode = "notes" | "therapist";
+
+export type SummaryType = "brief" | "actionable" | "todo" | "keypoints";
