@@ -5,9 +5,24 @@ import { useNotes, useDeleteNote, useCreateNote } from '@/hooks/useNotes';
 import { DashboardSummary } from '@/components/dashboard/DashboardSummary';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Search } from 'lucide-react';
+import { Loader2, Plus, Search, Trash } from 'lucide-react';
 import { Note, InsertNote } from '@/types/supabase';
 import { NoteCard } from '@/components/notes/NoteCard';
 import { Navbar } from '@/components/layout/Navbar';
@@ -16,7 +31,7 @@ import { NoteViewEditDialog } from '@/components/notes/NoteViewEditDialog.tsx';
 
 export default function Dashboard() {
   const { data: notes = [], isLoading } = useNotes();
-  const { mutate: deleteNote } = useDeleteNote();
+  const { mutate: deleteNote, isPending: isDeleting } = useDeleteNote();
   const { mutate: createNote, isPending: isCreating } = useCreateNote();
   const { data: user } = useUser();
   
@@ -28,6 +43,10 @@ export default function Dashboard() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
+  
+  // State for delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -65,12 +84,21 @@ export default function Dashboard() {
   };
   
   const handleDeleteNote = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
-      deleteNote(id);
-      if (selectedNote?.id === id) {
-        setIsViewDialogOpen(false);
+    setNoteToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteNote = () => {
+    if (!noteToDelete) return;
+    
+    deleteNote(noteToDelete, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        if (selectedNote?.id === noteToDelete) {
+          setIsViewDialogOpen(false);
+        }
       }
-    }
+    });
   };
   
   return (
@@ -176,6 +204,41 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this note. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteNote} 
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
