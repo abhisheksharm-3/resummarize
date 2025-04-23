@@ -4,7 +4,6 @@ import { summarizationService } from '@/services/ai/summarizationService';
 import { SummaryType } from '@/types/ai';
 import { Note } from '@/types/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 
 // Hook for summarizing a single note
 export function useNoteSummary(note: Note | null, type: SummaryType = 'brief') {
@@ -15,7 +14,7 @@ export function useNoteSummary(note: Note | null, type: SummaryType = 'brief') {
       return summarizationService.summarizeNote(note, { type });
     },
     enabled: !!note,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
   });
 }
 
@@ -28,7 +27,7 @@ export function useMultipleNotesSummary(notes: Note[], type: SummaryType = 'brie
       return summarizationService.summarizeMultipleNotes(notes, { type });
     },
     enabled: notes.length > 0,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
   });
 }
 
@@ -41,25 +40,6 @@ export function useNotesInsights(notes: Note[]) {
       return summarizationService.generateInsights(notes);
     },
     enabled: notes.length > 0,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
   });
-}
-
-// Custom hook to manage different summary types
-export function useDynamicSummaries(notes: Note[]) {
-  const [selectedSummaryType, setSelectedSummaryType] = useState<SummaryType>('brief');
-  
-  const allNotesSummary = useMultipleNotesSummary(notes, selectedSummaryType);
-  const notesInsights = useNotesInsights(notes);
-  
-  const summaryTypes: SummaryType[] = ['brief', 'detailed', 'actionable', 'todo', 'keypoints'];
-  
-  return {
-    selectedSummaryType,
-    setSelectedSummaryType,
-    summaryTypes,
-    allNotesSummary,
-    notesInsights,
-    isLoading: allNotesSummary.isLoading || notesInsights.isLoading
-  };
 }

@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { SummaryType } from '@/types/ai';
 import { NoteCardProps } from '@/types/notes';
 
-export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
+export function NoteCard({ note, onOpenNote, onDelete }: NoteCardProps) {
   const [showSummary, setShowSummary] = useState(false);
   const [summaryType, setSummaryType] = useState<SummaryType>('brief');
   
@@ -31,44 +31,70 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
     format(new Date(note.updated_at), 'MMM d, yyyy h:mm a') : '';
   
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow">
+    <Card 
+      className="h-full flex flex-col hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => onOpenNote(note)}
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg line-clamp-1">{note.title}</CardTitle>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button 
+                variant="ghost" 
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()} // Prevent dialog open when clicking dropdown
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onEdit(note)}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
+              <DropdownMenuItem onClick={() => onOpenNote(note)}>
+                <Edit className="mr-2 h-4 w-4" /> View & Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(note.id)}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                onDelete(note.id);
+              }}>
                 <Trash className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Summarize as</DropdownMenuLabel>
               <DropdownMenuItem 
-                onClick={() => { setSummaryType('brief'); setShowSummary(true); }}
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  setSummaryType('brief'); 
+                  setShowSummary(true); 
+                }}
               >
                 Brief
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => { setSummaryType('actionable'); setShowSummary(true); }}
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  setSummaryType('actionable'); 
+                  setShowSummary(true); 
+                }}
               >
                 Actionable Items
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => { setSummaryType('todo'); setShowSummary(true); }}
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  setSummaryType('todo'); 
+                  setShowSummary(true); 
+                }}
               >
                 To-Do List
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => { setSummaryType('keypoints'); setShowSummary(true); }}
+                onClick={(e) => { 
+                  e.stopPropagation();
+                  setSummaryType('keypoints'); 
+                  setShowSummary(true); 
+                }}
               >
                 Key Points
               </DropdownMenuItem>
@@ -88,7 +114,10 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
                 variant="ghost" 
                 size="sm" 
                 className="h-6 text-xs"
-                onClick={() => setShowSummary(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSummary(false);
+                }}
               >
                 View Note
               </Button>
@@ -112,7 +141,10 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
           variant="ghost" 
           size="sm" 
           className="ml-auto"
-          onClick={() => setShowSummary(!showSummary)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowSummary(!showSummary);
+          }}
         >
           <AlignLeft className="h-4 w-4 mr-1" /> 
           {showSummary ? 'Hide Summary' : 'Show Summary'}

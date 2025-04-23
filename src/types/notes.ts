@@ -2,7 +2,7 @@ import { Note } from "./supabase";
 
 export interface NoteCardProps {
   note: Note;
-  onEdit: (note: Note) => void;
+  onOpenNote: (note: Note) => void;
   onDelete: (id: string) => void;
 }
 
