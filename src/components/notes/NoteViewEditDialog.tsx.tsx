@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useUpdateNote } from '@/hooks/useNotes';
+import { useNoteMutations } from '@/hooks/useNotes';
 import { Loader2, Edit, AlertTriangle, XCircle, Check, Trash } from 'lucide-react';
 import { UpdateNote } from '@/types/supabase';
 import { format } from 'date-fns';
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 /**
- * Dialog for viewing and editing a note
+ * Dialog component for viewing and editing a note
  * 
  * @param props Component props
  * @param props.note The note to view or edit
@@ -32,7 +32,11 @@ import {
  * @returns React component
  */
 export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteViewEditDialogProps) {
-  // State
+  // Get mutations from our centralized hook
+  const { updateNote } = useNoteMutations();
+  const { mutate: updateNoteMutate, isPending: isUpdating } = updateNote;
+
+  // State management
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(note?.title || '');
   const [content, setContent] = useState(note?.content || '');
@@ -43,21 +47,20 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Update note mutation hook
-  const { mutate: updateNote, isPending: isUpdating } = useUpdateNote();
-
   // Reset state when note changes
   useEffect(() => {
     if (note) {
       setTitle(note.title);
       setContent(note.content);
       setHasUnsavedChanges(false);
+      setIsEditing(false); // Reset edit mode when switching notes
     }
   }, [note]);
 
   // Focus the title input when entering edit mode
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing && titleInputRef.current) {
+      // Short timeout to ensure the DOM has updated
       setTimeout(() => {
         titleInputRef.current?.focus();
       }, 50);
@@ -76,30 +79,33 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
    * Handle save operation
    */
   const handleSave = useCallback(() => {
-    if (!note) return;
+    if (!note || !note.id) return;
     
-    const updatedNote: UpdateNote = {
+    // Prepare updated note data
+    const updatedNote: UpdateNote & { id: string } = {
       id: note.id,
       title: title.trim() || 'Untitled Note',
       content,
-      user_id: note.user_id
+      user_id: note.user_id,
+      updated_at: new Date().toISOString() // Update timestamp
     };
 
-    updateNote(updatedNote, {
+    updateNoteMutate(updatedNote, {
       onSuccess: () => {
         setIsEditing(false);
         setHasUnsavedChanges(false);
         onClose();
       }
     });
-  }, [note, title, content, updateNote]);
+  }, [note, title, content, updateNoteMutate, onClose]);
 
   /**
    * Handle dialog close with unsaved changes check
    */
   const handleClose = useCallback(() => {
     if (isEditing && hasUnsavedChanges) {
-      if (confirm('You have unsaved changes. Are you sure you want to close?')) {
+      // Use the native confirm dialog for simplicity
+      if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
         setIsEditing(false);
         onClose();
       }
@@ -121,19 +127,19 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
    * Confirm delete operation
    */
   const confirmDelete = useCallback(() => {
-    if (!note) return;
+    if (!note || !note.id) return;
     onDelete(note.id);
     setShowDeleteConfirm(false);
   }, [note, onDelete]);
 
   /**
-   * Handle keyboard shortcuts
+   * Handle keyboard shortcuts for better UX
    */
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Save on Ctrl+S or Cmd+S
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
-      if (isEditing) {
+      if (isEditing && hasUnsavedChanges) {
         handleSave();
       }
     }
@@ -142,7 +148,7 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
     if (e.key === 'Escape' && isEditing) {
       e.preventDefault();
       if (hasUnsavedChanges) {
-        if (confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+        if (window.confirm('You have unsaved changes. Are you sure you want to cancel?')) {
           setIsEditing(false);
           if (note) {
             setTitle(note.title);
@@ -155,7 +161,7 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
     }
   }, [isEditing, hasUnsavedChanges, handleSave, note]);
 
-  // Format the updated date
+  // Format the updated date with fallback
   const formattedDate = note?.updated_at ? 
     format(new Date(note.updated_at), 'MMM d, yyyy h:mm a') : 'No date available';
 
@@ -219,7 +225,7 @@ export function NoteViewEditDialog({ note, isOpen, onClose, onDelete }: NoteView
                   variant="outline" 
                   onClick={() => {
                     if (hasUnsavedChanges) {
-                      if (confirm('Discard changes?')) {
+                      if (window.confirm('Discard changes?')) {
                         setIsEditing(false);
                         if (note) {
                           setTitle(note.title);

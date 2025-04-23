@@ -1,45 +1,121 @@
 'use client';
 
 import { summarizationService } from '@/services/ai/summarizationService';
-import { SummaryType } from '@/types/ai';
+import { SummaryQueryOptions, SummaryType } from '@/types/ai';
 import { Note } from '@/types/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery} from '@tanstack/react-query';
 
-// Hook for summarizing a single note
-export function useNoteSummary(note: Note | null, type: SummaryType = 'brief') {
+/**
+ * Query keys for AI summarization operations
+ */
+const summaryKeys = {
+  all: ['summaries'] as const,
+  note: (noteId: string, type: SummaryType) => 
+    [...summaryKeys.all, 'note', noteId, type] as const,
+  multipleNotes: (noteIds: string[], type: SummaryType) => 
+    [...summaryKeys.all, 'multiple', noteIds.join(','), type] as const,
+  insights: (noteIds: string[]) => 
+    [...summaryKeys.all, 'insights', noteIds.join(',')] as const,
+};
+
+/**
+ * Default options for summarization queries
+ */
+const defaultOptions: SummaryQueryOptions = {
+  staleTime: 1000 * 60 * 10, // 10 minutes
+  retry: 2,
+  retryDelay: 1000,
+};
+
+/**
+ * Hook for summarizing a single note with AI
+ * 
+ * @param note - The note to summarize
+ * @param type - Summary type (brief, detailed, bullets)
+ * @param options - Additional query options
+ * @returns Query result containing the summary, loading and error states
+ */
+export function useNoteSummary(
+  note: Note | null, 
+  type: SummaryType = 'brief',
+  options: SummaryQueryOptions = {}
+) {
+  const mergedOptions = { ...defaultOptions, ...options };
+  
   return useQuery({
-    queryKey: ['note-summary', note?.id, type],
-    queryFn: () => {
-      if (!note) throw new Error('Note is required');
+    queryKey: note?.id ? summaryKeys.note(note.id, type) : ['invalid'],
+    queryFn: async () => {
+      if (!note) throw new Error('Note is required for summarization');
       return summarizationService.summarizeNote(note, { type });
     },
-    enabled: !!note,
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    enabled: !!note && (options.enabled !== false),
+    staleTime: mergedOptions.staleTime,
+    retry: mergedOptions.retry,
+    retryDelay: typeof mergedOptions.retryDelay === 'number' 
+      ? () => mergedOptions.retryDelay as number
+      : undefined,
   });
 }
 
-// Hook for summarizing multiple notes
-export function useMultipleNotesSummary(notes: Note[], type: SummaryType = 'brief') {
+/**
+ * Hook for summarizing multiple notes with AI
+ * 
+ * @param notes - Array of notes to summarize
+ * @param type - Summary type (brief, detailed, bullets)
+ * @param options - Additional query options
+ * @returns Query result containing the combined summary
+ */
+export function useMultipleNotesSummary(
+  notes: Note[], 
+  type: SummaryType = 'brief',
+  options: SummaryQueryOptions = {}
+) {
+  const mergedOptions = { ...defaultOptions, ...options };
+  const noteIds = notes.map(n => n.id);
+  
   return useQuery({
-    queryKey: ['notes-summary', notes.map(n => n.id).join(','), type],
-    queryFn: () => {
-      if (!notes.length) throw new Error('No notes provided');
+    queryKey: notes.length > 0 ? summaryKeys.multipleNotes(noteIds, type) : ['invalid'],
+    queryFn: async () => {
+      if (!notes.length) throw new Error('No notes provided for summarization');
       return summarizationService.summarizeMultipleNotes(notes, { type });
     },
-    enabled: notes.length > 0,
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    enabled: notes.length > 0 && (options.enabled !== false),
+    staleTime: mergedOptions.staleTime,
+    retry: mergedOptions.retry,
+    retryDelay: typeof mergedOptions.retryDelay === 'number' 
+      ? () => mergedOptions.retryDelay as number
+      : undefined,
   });
 }
 
-// Hook for generating insights from all notes
-export function useNotesInsights(notes: Note[]) {
+/**
+ * Hook for generating AI insights from a collection of notes
+ * 
+ * @param notes - Array of notes to analyze
+ * @param options - Additional query options
+ * @returns Query result containing generated insights
+ */
+export function useNotesInsights(
+  notes: Note[],
+  options: SummaryQueryOptions = {}
+) {
+  const mergedOptions = { ...defaultOptions, ...options };
+  const noteIds = notes.map(n => n.id);
+  
   return useQuery({
-    queryKey: ['notes-insights', notes.map(n => n.id).join(',')],
-    queryFn: () => {
-      if (!notes.length) throw new Error('No notes provided');
+    queryKey: notes.length > 0 ? summaryKeys.insights(noteIds) : ['invalid'],
+    queryFn: async () => {
+      if (!notes.length) throw new Error('No notes provided for insights generation');
       return summarizationService.generateInsights(notes);
     },
-    enabled: notes.length > 0,
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    enabled: notes.length > 0 && (options.enabled !== false),
+    staleTime: mergedOptions.staleTime,
+    retry: mergedOptions.retry,
+    retryDelay: typeof mergedOptions.retryDelay === 'number' 
+      ? () => mergedOptions.retryDelay as number
+      : undefined,
+    // AI insights are more resource-intensive, so we refetch less often
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }

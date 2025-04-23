@@ -1,30 +1,66 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Note } from "@/types/supabase";
 import { chatbotService, ChatMessage, ChatMode } from '@/services/ai/chatbotService';
 import { useLocalStorage } from './useLocalStorage';
+import { UseChatbotOptions, UseChatbotReturn } from '@/types/chat';
 
-export const useChatbot = (notes?: Note[]) => {
+/**
+ * Custom hook for managing chatbot interactions
+ * 
+ * @param notes - Optional array of notes to provide context to the chatbot
+ * @param options - Configuration options
+ * @returns Chatbot state and control functions
+ */
+export function useChatbot(
+  notes?: Note[],
+  options: UseChatbotOptions = {}
+): UseChatbotReturn {
+  // Apply default options
+  const {
+    maxHistoryLength = 100,
+    preserveHistoryOnModeSwitch = true,
+    openOnMount = false,
+  } = options;
+  
+  // Local storage for persistence
   const [storedMessages, setStoredMessages] = useLocalStorage<ChatMessage[]>('chatbot-messages', []);
   const [storedMode, setStoredMode] = useLocalStorage<ChatMode>('chatbot-mode', 'notes');
-  const [isOpen, setIsOpen] = useLocalStorage('chatbot-open', false);
+  const [isOpen, setIsOpen] = useLocalStorage('chatbot-open', openOnMount);
   
+  // State management
   const [messages, setMessages] = useState<ChatMessage[]>(storedMessages);
   const [mode, setMode] = useState<ChatMode>(storedMode);
+  const [lastError, setLastError] = useState<Error | null>(null);
   
+  // Refs to track if we need to sync with localStorage
+  const messagesRef = useRef(messages);
+  const modeRef = useRef(mode);
+  
+  // React Query utilities
   const queryClient = useQueryClient();
 
-  // Sync state with localStorage
+  // Only sync to localStorage when needed, not on every render
   useEffect(() => {
-    setStoredMessages(messages);
-  }, [messages, setStoredMessages]);
+    if (JSON.stringify(messagesRef.current) !== JSON.stringify(messages)) {
+      const trimmedMessages = messages.slice(-maxHistoryLength);
+      setStoredMessages(trimmedMessages);
+      messagesRef.current = messages;
+    }
+  }, [messages, setStoredMessages, maxHistoryLength]);
 
   useEffect(() => {
-    setStoredMode(mode);
+    if (modeRef.current !== mode) {
+      setStoredMode(mode);
+      modeRef.current = mode;
+    }
   }, [mode, setStoredMode]);
 
-  const { mutate: sendMessage, isPending: isSending } = useMutation({
+  // Message sending mutation
+  const { mutate: sendMessageMutation, isPending: isSending } = useMutation({
     mutationFn: async (content: string) => {
+      setLastError(null);
+      
       const userMessage: ChatMessage = { 
         role: "user", 
         content,
@@ -33,14 +69,19 @@ export const useChatbot = (notes?: Note[]) => {
       
       setMessages(prev => [...prev, userMessage]);
       
-      const response = await chatbotService.sendMessage(
-        content, 
-        mode, 
-        [...messages, userMessage], 
-        notes
-      );
-      
-      return response;
+      try {
+        const response = await chatbotService.sendMessage(
+          content, 
+          mode, 
+          [...messages, userMessage], 
+          notes
+        );
+        
+        return response;
+      } catch (error) {
+        setLastError(error instanceof Error ? error : new Error(String(error)));
+        throw error;
+      }
     },
     onSuccess: (response) => {
       setMessages(prev => [...prev, response]);
@@ -58,16 +99,25 @@ export const useChatbot = (notes?: Note[]) => {
     }
   });
 
-  const toggleChat = () => setIsOpen(!isOpen);
-  const closeChat = () => setIsOpen(false);
-  const openChat = () => setIsOpen(true);
+  // Use callbacks to prevent recreating functions on every render
+  const sendMessage = useCallback((content: string) => {
+    if (content.trim()) {
+      sendMessageMutation(content);
+    }
+  }, [sendMessageMutation]);
+
+  const toggleChat = useCallback(() => setIsOpen(prev => !prev), [setIsOpen]);
+  const closeChat = useCallback(() => setIsOpen(false), [setIsOpen]);
+  const openChat = useCallback(() => setIsOpen(true), [setIsOpen]);
+  const clearChat = useCallback(() => setMessages([]), []);
   
-  const clearChat = () => setMessages([]);
-  
-  const switchMode = (newMode: ChatMode) => {
+  const switchMode = useCallback((newMode: ChatMode) => {
     setMode(newMode);
-    // Don't clear chat automatically to preserve context
-  };
+    
+    if (!preserveHistoryOnModeSwitch) {
+      clearChat();
+    }
+  }, [preserveHistoryOnModeSwitch, clearChat]);
 
   return {
     messages,
@@ -79,6 +129,7 @@ export const useChatbot = (notes?: Note[]) => {
     openChat,
     mode,
     switchMode,
-    clearChat
+    clearChat,
+    lastError
   };
-};
+}
