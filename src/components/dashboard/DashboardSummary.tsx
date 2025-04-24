@@ -365,6 +365,7 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
+                      className="flex flex-col h-full"
                     >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
                         <h3 className="text-sm font-medium">
@@ -386,81 +387,84 @@ export function DashboardSummary({ notes }: DashboardSummaryProps) {
                         </div>
                       </div>
                       
-                      <ScrollArea className="max-h-[460px] pr-4 -mr-4">
-                        <motion.div 
-                          className="space-y-2.5"
-                          layout
-                        >
-                          {sortedActionItems.map((item, index) => (
-                            <motion.div
-                              layout
-                              key={item.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.05 }}
-                              className={cn(
-                                "flex items-start gap-3 p-3 rounded-md border transition-colors",
-                                item.completed 
-                                  ? "bg-muted/40 border-muted" 
-                                  : "bg-card border-border hover:border-primary/30"
-                              )}
-                            >
-                              <Checkbox 
-                                id={item.id}
-                                checked={item.completed}
-                                onCheckedChange={() => toggleComplete(item.id)}
-                                className="mt-1"
-                                aria-label={`Mark "${item.text.substring(0, 20)}..." as ${item.completed ? 'incomplete' : 'complete'}`}
-                              />
-                              <div className="flex-1">
-                                <label 
-                                  htmlFor={item.id} 
-                                  className={cn(
-                                    "block text-sm font-medium cursor-pointer",
-                                    item.completed && "line-through text-muted-foreground"
-                                  )}
-                                >
-                                  {item.text}
-                                </label>
-                                
-                                {/* Metadata row - priorities, dates, etc */}
-                                {(item.priority || item.dueDate || item.category || item.source) && (
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {item.priority && (
-                                      <div className={cn(
-                                        "inline-flex items-center text-xs px-2 py-0.5 rounded-full",
-                                        getPriorityColor(item.priority)
-                                      )}>
-                                        <CircleAlert className="h-3 w-3 mr-1" />
-                                        {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)} priority
-                                      </div>
-                                    )}
-                                    
-                                    {item.dueDate && (
-                                      <div className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                                        <CalendarClock className="h-3 w-3 mr-1" />
-                                        {item.dueDate}
-                                      </div>
-                                    )}
-                                    
-                                    {item.category && (
-                                      <Badge variant="outline" className="text-xs font-normal">
-                                        {item.category}
-                                      </Badge>
-                                    )}
-                                    
-                                    {item.source && (
-                                      <Badge variant="secondary" className="text-xs font-normal">
-                                        From: {item.source}
-                                      </Badge>
-                                    )}
-                                  </div>
+                      {/* Fixed height container with proper overflow handling */}
+                      <div className="relative h-[460px]">
+                        <ScrollArea className="h-full w-full absolute inset-0 pr-4 -mr-4">
+                          <motion.div 
+                            className="space-y-2.5 pb-2"
+                            layout="position"
+                          >
+                            {sortedActionItems.map((item, index) => (
+                              <motion.div
+                                layout="position"
+                                key={item.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className={cn(
+                                  "flex items-start gap-3 p-3 rounded-md border transition-colors",
+                                  item.completed 
+                                    ? "bg-muted/40 border-muted" 
+                                    : "bg-card border-border hover:border-primary/30"
                                 )}
-                              </div>
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      </ScrollArea>
+                              >
+                                <Checkbox 
+                                  id={item.id}
+                                  checked={item.completed}
+                                  onCheckedChange={() => toggleComplete(item.id)}
+                                  className="mt-1"
+                                  aria-label={`Mark "${item.text.substring(0, 20)}..." as ${item.completed ? 'incomplete' : 'complete'}`}
+                                />
+                                <div className="flex-1">
+                                  <label 
+                                    htmlFor={item.id} 
+                                    className={cn(
+                                      "block text-sm font-medium cursor-pointer",
+                                      item.completed && "line-through text-muted-foreground"
+                                    )}
+                                  >
+                                    {item.text}
+                                  </label>
+                                  
+                                  {/* Metadata row - priorities, dates, etc */}
+                                  {(item.priority || item.dueDate || item.category || item.source) && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2">
+                                      {item.priority && (
+                                        <div className={cn(
+                                          "inline-flex items-center text-xs px-2 py-0.5 rounded-full",
+                                          getPriorityColor(item.priority)
+                                        )}>
+                                          <CircleAlert className="h-3 w-3 mr-1" />
+                                          {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)} priority
+                                        </div>
+                                      )}
+                                      
+                                      {item.dueDate && (
+                                        <div className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                          <CalendarClock className="h-3 w-3 mr-1" />
+                                          {item.dueDate}
+                                        </div>
+                                      )}
+                                      
+                                      {item.category && (
+                                        <Badge variant="outline" className="text-xs font-normal">
+                                          {item.category}
+                                        </Badge>
+                                      )}
+                                      
+                                      {item.source && (
+                                        <Badge variant="secondary" className="text-xs font-normal">
+                                          From: {item.source}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            ))}
+                          </motion.div>
+                        </ScrollArea>
+                      </div>
                       
                       {Object.values(completedItems).some(Boolean) && (
                         <div className="text-xs text-muted-foreground text-center mt-4 py-2 border-t">
