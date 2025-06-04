@@ -1,0 +1,64 @@
+name: Ping Supabase to Prevent Pausing
+
+on:
+  schedule:
+    - cron: '0 9 * * 1,4' # Runs at 9:00 AM UTC every Monday and Thursday
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use Node.js 20 LTS
+
+      # Step 3: Install Supabase Client
+      - name: Install Supabase Client
+        run: npm install @supabase/supabase-js
+
+      # Step 4: Ping Supabase
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          node -e "
+          (async () => {
+            try {
+              console.log('Starting Supabase ping...');
+              
+              // Import Supabase client
+              const { createClient } = require('@supabase/supabase-js');
+              
+              // Validate environment variables
+              if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+                throw new Error('Missing required Supabase environment variables');
+              }
+              
+              // Initialize Supabase client using the anon key
+              const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+              
+              // Simple ping query - this should work with anon key if your RLS allows it
+              console.log('Pinging Supabase...');
+              const { data, error } = await supabase.from('notes').select('count').limit(1);
+
+              // Handle errors
+              if (error) throw error;
+
+              // Log success
+              console.log('Ping successful! Database is active.');
+              
+            } catch (err) {
+              console.error('Error pinging Supabase:', err);
+              process.exit(1);
+            }
+          })();
+          "
