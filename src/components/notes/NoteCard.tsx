@@ -64,10 +64,6 @@ export function NoteCard({ note, onOpenNote, onDelete }: NoteCardProps) {
   // Format the date for display
   const formattedDate = note.updated_at ? 
     format(new Date(note.updated_at), 'MMM d, yyyy h:mm a') : 'No date';
-  
-  // Debug information - hidden in UI
-  const currentDateTime = "2025-04-23 13:47:24";
-  const currentUser = "abhisheksharm-3";
 
   /**
    * Handles showing a specific summary type
@@ -91,9 +87,7 @@ export function NoteCard({ note, onOpenNote, onDelete }: NoteCardProps) {
    */
   const handleDelete = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this note?')) {
-      onDelete(note.id);
-    }
+    onDelete(note.id);
   }, [note.id, onDelete]);
 
   /**
@@ -221,11 +215,6 @@ export function NoteCard({ note, onOpenNote, onDelete }: NoteCardProps) {
           {showSummary ? 'Hide Summary' : 'Show Summary'}
         </Button>
       </CardFooter>
-      
-      {/* Debug info - hidden */}
-      <div className="hidden text-[8px] text-muted-foreground/30">
-        {currentDateTime} - {currentUser}
-      </div>
     </Card>
   );
 }
